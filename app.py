@@ -8,11 +8,6 @@ from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import or_
 from werkzeug.security import generate_password_hash, check_password_hash
 
-try:
-    from openai import OpenAI
-except ImportError:
-    OpenAI = None
-
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-only-change-this-secret-key')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -113,30 +108,37 @@ def owned_plan(plan_id):
     return LessonPlan.query.filter_by(id=plan_id, user_id=current_user().id).first_or_404()
 
 
-def ai_text(instructions, prompt):
-    api_key = os.environ.get('OPENAI_API_KEY', '').strip()
-    if not api_key or OpenAI is None:
-        return None, 'ยังไม่ได้เปิดใช้ AI: ให้ตั้งค่า OPENAI_API_KEY ใน Render Environment และตรวจว่ามีแพ็กเกจ openai ใน requirements.txt'
-    try:
-        client = OpenAI(api_key=api_key, timeout=45.0, max_retries=1)
-        result = client.responses.create(
-            model=os.environ.get('OPENAI_MODEL', 'gpt-5.5'),
-            instructions=instructions,
-            input=prompt,
-            max_output_tokens=1800,
-        )
-        return result.output_text.strip(), None
-    except Exception as exc:
-        app.logger.exception('AI generation failed')
-        # Avoid showing API key or internal traceback to end users.
-        return None, 'เรียก AI ไม่สำเร็จ กรุณาตรวจ OPENAI_API_KEY, ชื่อโมเดล และการตั้งค่าบัญชี API ใน Render'
+def build_free_draft(kind, subject, grade, topic, duration):
+    """Generate an editable teaching scaffold locally; no external AI/API calls."""
+    subject = subject or 'ยังไม่ระบุวิชา'
+    grade = grade or 'ปรับตามระดับชั้น'
+    if kind == 'quiz':
+        questions = [
+            f'1. อธิบายความหมายของ “{topic}” ด้วยคำพูดของตนเอง',
+            f'2. ยกตัวอย่าง {topic} ที่พบได้ในชีวิตประจำวัน 1 ตัวอย่าง พร้อมอธิบาย',
+            f'3. ข้อใดเป็นลักษณะสำคัญของ {topic}? (ครูเติมตัวเลือกให้ตรงกับเนื้อหาที่สอน)',
+            f'4. สถานการณ์ใดแสดงการนำ {topic} ไปใช้ได้เหมาะสมที่สุด? (ครูเติมสถานการณ์และตัวเลือก)',
+            f'5. เปรียบเทียบ {topic} กับแนวคิดที่เกี่ยวข้อง 1 ประเด็น',
+            f'6. อ่านตัวอย่าง/ข้อมูลเกี่ยวกับ {topic} แล้วตอบคำถาม (ครูเพิ่มข้อมูลประกอบ)',
+            f'7. วิเคราะห์ข้อผิดพลาดที่อาจเกิดขึ้นเมื่อเรียนเรื่อง {topic}',
+            f'8. สรุปสิ่งที่ได้เรียนรู้เกี่ยวกับ {topic} และเสนอวิธีนำไปใช้ 1 วิธี',
+        ]
+        return (f'ร่างแบบทดสอบ: {topic}\nวิชา: {subject} | ระดับชั้น: {grade}\n\n' + '\n\n'.join(questions) + '\n\nหมายเหตุ: นี่คือแม่แบบคำถาม ไม่ใช่ข้อสอบที่สร้างด้วย AI โปรดเติมตัวเลือก/ข้อมูลประกอบและตรวจความถูกต้องให้ตรงกับบทเรียนก่อนใช้'), None
+    return (f'ร่างแผนการจัดการเรียนรู้\nวิชา: {subject}\nระดับชั้น: {grade}\nหัวข้อ: {topic}\nเวลา: {duration or "50 นาที"}\n\n'
+            f'1. จุดประสงค์การเรียนรู้\n- ผู้เรียนอธิบายแนวคิดสำคัญของเรื่อง {topic} ได้\n- ผู้เรียนยกตัวอย่างหรือประยุกต์ใช้ความรู้เรื่อง {topic} ได้\n- ผู้เรียนสื่อสารสิ่งที่เรียนรู้และสะท้อนผลการเรียนรู้ได้\n\n'
+            '2. ขั้นนำเข้าสู่บทเรียน (ประมาณ 5 นาที)\n- ครูตั้งคำถามกระตุ้นความคิดหรือยกสถานการณ์ใกล้ตัวที่เชื่อมโยงกับหัวข้อ\n- ให้ผู้เรียนแลกเปลี่ยนความรู้เดิม\n\n'
+            '3. ขั้นกิจกรรมการเรียนรู้\n- ครูอธิบายแนวคิดสำคัญพร้อมตัวอย่างที่เหมาะกับวัย\n- ผู้เรียนทำงานเดี่ยว/คู่/กลุ่มเพื่อสำรวจ วิเคราะห์ หรือแก้โจทย์เกี่ยวกับหัวข้อ\n- ให้ผู้เรียนอธิบายเหตุผลและแลกเปลี่ยนคำตอบ ครูให้ข้อเสนอแนะ\n\n'
+            '4. ขั้นสรุป (ประมาณ 5 นาที)\n- ผู้เรียนสรุปประเด็นสำคัญด้วยแผนผังความคิดหรือบัตรออกจากห้อง\n- ครูทบทวนความเข้าใจและแก้ความเข้าใจคลาดเคลื่อน\n\n'
+            '5. สื่อและอุปกรณ์\n- หนังสือ/เอกสารประกอบบทเรียน\n- ใบงานหรือบัตรคำถามเกี่ยวกับหัวข้อ\n- กระดานหรืออุปกรณ์นำเสนอที่มีอยู่\n\n'
+            '6. การวัดและประเมินผล\n- ตรวจคำตอบจากใบงานหรือภาระงาน\n- สังเกตการมีส่วนร่วมและการอธิบายเหตุผล\n- ใช้คำถามสั้นท้ายคาบเพื่อตรวจความเข้าใจ\n\n'
+            'หมายเหตุ: นี่คือแม่แบบช่วยวางแผน ไม่ใช่เนื้อหาที่สร้างโดย AI โปรดปรับกิจกรรม เวลา และเกณฑ์ประเมินให้ตรงกับตัวชี้วัดและบริบทของห้องเรียน'), None
 
 
 @app.route('/')
 def index():
     if current_user():
         return redirect(url_for('dashboard'))
-    body = r'''<section class="welcome"><div><h2>เตรียมการสอนให้ง่ายขึ้นในที่เดียว 📚</h2><p>วางแผนบทเรียน สร้างแบบทดสอบ ติดตามงาน และใช้ AI ช่วยร่างเนื้อหา</p></div><div class="actions"><a class="btn primary" href="{{ url_for('register') }}">เริ่มใช้งานฟรี</a><a class="btn secondary" href="{{ url_for('login') }}">เข้าสู่ระบบ</a></div></section><div class="grid"><div class="card"><div class="emoji">📝</div><h3>Smart Lesson Planner</h3><p class="muted">สร้างแผนด้วยแม่แบบกิจกรรมที่นำไปปรับใช้ได้</p></div><div class="card"><div class="emoji">🎯</div><h3>Quiz & Worksheet</h3><p class="muted">สร้างข้อสอบพร้อมเฉลยและหน้าพิมพ์</p></div><div class="card"><div class="emoji">✨</div><h3>AI Studio</h3><p class="muted">เชื่อมต่อ AI API เพื่อช่วยร่างแผนและแบบทดสอบ</p></div></div>'''
+    body = r'''<section class="welcome"><div><h2>เตรียมการสอนให้ง่ายขึ้นในที่เดียว 📚</h2><p>วางแผนบทเรียน สร้างแบบทดสอบ ติดตามงาน และใช้ AI ช่วยร่างเนื้อหา</p></div><div class="actions"><a class="btn primary" href="{{ url_for('register') }}">เริ่มใช้งานฟรี</a><a class="btn secondary" href="{{ url_for('login') }}">เข้าสู่ระบบ</a></div></section><div class="grid"><div class="card"><div class="emoji">📝</div><h3>Smart Lesson Planner</h3><p class="muted">สร้างแผนด้วยแม่แบบกิจกรรมที่นำไปปรับใช้ได้</p></div><div class="card"><div class="emoji">🎯</div><h3>Quiz & Worksheet</h3><p class="muted">สร้างข้อสอบพร้อมเฉลยและหน้าพิมพ์</p></div><div class="card"><div class="emoji">✨</div><h3>AI Studio</h3><p class="muted">สร้างร่างจากแม่แบบฟรี ไม่ใช้ API ภายนอก</p></div></div>'''
     return page('ยินดีต้อนรับ', body)
 
 
@@ -185,7 +187,7 @@ def dashboard():
     quiz_count = Quiz.query.filter_by(user_id=user.id).count()
     open_tasks = TeachingTask.query.filter_by(user_id=user.id, status='ยังไม่เสร็จ').count()
     upcoming = TeachingTask.query.filter_by(user_id=user.id).order_by(TeachingTask.due_date.asc()).limit(4).all()
-    body = r'''<section class="welcome"><div><h2>สวัสดี {{ current_user.name }} 👋</h2><p>วันนี้เตรียมการสอนได้เป็นระบบขึ้นอีกนิด</p></div><a class="btn primary" href="{{ url_for('new_plan') }}">＋ สร้างแผนการสอน</a></section><div class="grid" style="margin-bottom:16px"><div class="stat"><div class="label">แผนการสอน</div><div class="num">{{ plan_count }}</div></div><div class="stat"><div class="label">แบบทดสอบ</div><div class="num">{{ quiz_count }}</div></div><div class="stat"><div class="label">งานที่ยังไม่เสร็จ</div><div class="num">{{ open_tasks }}</div></div></div><div class="grid" style="margin-bottom:18px"><a class="card tile" href="{{ url_for('new_plan') }}"><div class="emoji">📝</div><h3>Smart Lesson Planner</h3><p>สร้างแผนจากแม่แบบกิจกรรม</p></a><a class="card tile" href="{{ url_for('quiz_new') }}"><div class="emoji">🎯</div><h3>สร้างแบบทดสอบ</h3><p>บันทึกข้อสอบและเฉลย</p></a><a class="card tile" href="{{ url_for('ai_studio') }}"><div class="emoji">✨</div><h3>AI Studio</h3><p>ให้ AI ช่วยร่างเนื้อหา</p></a><a class="card tile" href="{{ url_for('search_plans') }}"><div class="emoji">🔎</div><h3>ค้นหาแผน</h3><p>ค้นหาและคัดลอกแผนเก่า</p></a><a class="card tile" href="{{ url_for('calendar') }}"><div class="emoji">🗓️</div><h3>ปฏิทินและงาน</h3><p>ติดตามกำหนดส่ง</p></a><a class="card tile" href="{{ url_for('quiz_list') }}"><div class="emoji">📚</div><h3>คลังแบบทดสอบ</h3><p>เปิดดูและพิมพ์ใบงาน</p></a></div><div class="layout"><div class="card"><div class="split"><h3>แผนล่าสุด</h3><a href="{{ url_for('search_plans') }}">ดูทั้งหมด</a></div>{% if plans %}{% for p in plans %}<div class="lesson"><h4>{{ p.topic }}</h4><small>{{ p.subject }} · {{ p.grade }}</small><div class="actions" style="margin-top:10px"><a class="btn secondary" href="{{ url_for('view_plan',plan_id=p.id) }}">เปิดแผน</a></div></div>{% endfor %}{% else %}<div class="empty">ยังไม่มีแผนการสอน เริ่มสร้างแผนแรกได้เลย</div>{% endif %}</div><div class="card"><h3>งานที่ต้องติดตาม</h3>{% if upcoming %}{% for t in upcoming %}<div class="lesson"><b>{{ t.title }}</b><p class="small">กำหนดส่ง: {{ t.due_date.strftime('%d/%m/%Y') if t.due_date else 'ยังไม่กำหนด' }} · {{ t.status }}</p></div>{% endfor %}{% else %}<div class="empty">ยังไม่มีงานที่ต้องติดตาม</div>{% endif %}<a class="btn secondary" href="{{ url_for('calendar') }}">จัดการงานทั้งหมด</a></div></div>'''
+    body = r'''<section class="welcome"><div><h2>สวัสดี {{ current_user.name }} 👋</h2><p>วันนี้เตรียมการสอนได้เป็นระบบขึ้นอีกนิด</p></div><a class="btn primary" href="{{ url_for('new_plan') }}">＋ สร้างแผนการสอน</a></section><div class="grid" style="margin-bottom:16px"><div class="stat"><div class="label">แผนการสอน</div><div class="num">{{ plan_count }}</div></div><div class="stat"><div class="label">แบบทดสอบ</div><div class="num">{{ quiz_count }}</div></div><div class="stat"><div class="label">งานที่ยังไม่เสร็จ</div><div class="num">{{ open_tasks }}</div></div></div><div class="grid" style="margin-bottom:18px"><a class="card tile" href="{{ url_for('new_plan') }}"><div class="emoji">📝</div><h3>Smart Lesson Planner</h3><p>สร้างแผนจากแม่แบบกิจกรรม</p></a><a class="card tile" href="{{ url_for('quiz_new') }}"><div class="emoji">🎯</div><h3>สร้างแบบทดสอบ</h3><p>บันทึกข้อสอบและเฉลย</p></a><a class="card tile" href="{{ url_for('ai_studio') }}"><div class="emoji">✨</div><h3>Teaching Studio</h3><p>สร้างร่างจากแม่แบบฟรี</p></a><a class="card tile" href="{{ url_for('search_plans') }}"><div class="emoji">🔎</div><h3>ค้นหาแผน</h3><p>ค้นหาและคัดลอกแผนเก่า</p></a><a class="card tile" href="{{ url_for('calendar') }}"><div class="emoji">🗓️</div><h3>ปฏิทินและงาน</h3><p>ติดตามกำหนดส่ง</p></a><a class="card tile" href="{{ url_for('quiz_list') }}"><div class="emoji">📚</div><h3>คลังแบบทดสอบ</h3><p>เปิดดูและพิมพ์ใบงาน</p></a></div><div class="layout"><div class="card"><div class="split"><h3>แผนล่าสุด</h3><a href="{{ url_for('search_plans') }}">ดูทั้งหมด</a></div>{% if plans %}{% for p in plans %}<div class="lesson"><h4>{{ p.topic }}</h4><small>{{ p.subject }} · {{ p.grade }}</small><div class="actions" style="margin-top:10px"><a class="btn secondary" href="{{ url_for('view_plan',plan_id=p.id) }}">เปิดแผน</a></div></div>{% endfor %}{% else %}<div class="empty">ยังไม่มีแผนการสอน เริ่มสร้างแผนแรกได้เลย</div>{% endif %}</div><div class="card"><h3>งานที่ต้องติดตาม</h3>{% if upcoming %}{% for t in upcoming %}<div class="lesson"><b>{{ t.title }}</b><p class="small">กำหนดส่ง: {{ t.due_date.strftime('%d/%m/%Y') if t.due_date else 'ยังไม่กำหนด' }} · {{ t.status }}</p></div>{% endfor %}{% else %}<div class="empty">ยังไม่มีงานที่ต้องติดตาม</div>{% endif %}<a class="btn secondary" href="{{ url_for('calendar') }}">จัดการงานทั้งหมด</a></div></div>'''
     return page('Dashboard', body, plans=plans, plan_count=plan_count, quiz_count=quiz_count, open_tasks=open_tasks, upcoming=upcoming)
 
 
@@ -246,21 +248,19 @@ def delete_plan(plan_id):
 @app.route('/ai', methods=['GET', 'POST'])
 @login_required
 def ai_studio():
-    generated=None; kind=request.form.get('kind','plan')
-    if request.method=='POST':
-        subject=request.form.get('subject','').strip(); grade=request.form.get('grade','').strip(); topic=request.form.get('topic','').strip(); duration=request.form.get('duration','50 นาที')
-        if not topic: flash('กรุณากรอกหัวข้อบทเรียนก่อน', 'error')
+    generated = None
+    kind = request.form.get('kind', 'plan')
+    if request.method == 'POST':
+        subject = request.form.get('subject', '').strip()
+        grade = request.form.get('grade', '').strip()
+        topic = request.form.get('topic', '').strip()
+        duration = request.form.get('duration', '50 นาที')
+        if not topic:
+            flash('กรุณากรอกหัวข้อบทเรียนก่อน', 'error')
         else:
-            if kind=='quiz':
-                instructions='คุณเป็นผู้ช่วยครูไทย สร้างแบบทดสอบภาษาไทยให้เหมาะกับวัย แยกส่วนข้อสอบและเฉลยชัดเจน ห้ามอ้างว่าเป็นมาตรฐานหลักสูตรที่ตรวจสอบแล้วถ้าไม่มีข้อมูล'
-                prompt=f'สร้างแบบทดสอบ 8 ข้อพร้อมตัวเลือก 4 ตัวเลือกและเฉลยอธิบายสั้น ๆ\nวิชา: {subject}\nระดับชั้น: {grade}\nหัวข้อ: {topic}'
-            else:
-                instructions='คุณเป็นผู้ช่วยออกแบบการเรียนรู้ภาษาไทย สร้างร่างแผนการสอนที่ครูนำไปปรับใช้ได้ ใช้ภาษาชัดเจนและคำนึงถึงความแตกต่างของผู้เรียน แยกหัวข้อเป็นจุดประสงค์ ขั้นนำ ขั้นสอน ขั้นสรุป สื่อ และการประเมิน'
-                prompt=f'ช่วยร่างแผนการสอนภาษาไทย\nวิชา: {subject}\nระดับชั้น: {grade}\nหัวข้อ: {topic}\nเวลา: {duration}\nให้กิจกรรมเป็นขั้นตอนและทำได้จริง'
-            generated,error=ai_text(instructions,prompt)
-            if error: flash(error,'error')
-    body=r'''<div class="card"><h2>✨ AI Studio</h2><p class="sub">เชื่อมต่อ OpenAI API เพื่อสร้างร่างแผนหรือข้อสอบจริง เนื้อหาที่ได้ควรตรวจทานก่อนนำไปใช้</p><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="field"><label>ต้องการให้ AI สร้างอะไร</label><select name="kind"><option value="plan" {% if kind=='plan' %}selected{% endif %}>ร่างแผนการสอน</option><option value="quiz" {% if kind=='quiz' %}selected{% endif %}>แบบทดสอบพร้อมเฉลย</option></select></div><div class="layout"><div class="field"><label>วิชา</label><input name="subject" value="{{ request.form.get('subject','') }}" placeholder="เช่น ภาษาไทย"></div><div class="field"><label>ระดับชั้น</label><input name="grade" value="{{ request.form.get('grade','') }}" placeholder="เช่น ป.5"></div></div><div class="field"><label>หัวข้อบทเรียน *</label><input name="topic" required value="{{ request.form.get('topic','') }}" placeholder="เช่น คำควบกล้ำ"></div><div class="field"><label>เวลาเรียน</label><select name="duration">{% for d in ['50 นาที','60 นาที','90 นาที','100 นาที'] %}<option {% if request.form.get('duration','50 นาที')==d %}selected{% endif %}>{{ d }}</option>{% endfor %}</select></div><button class="primary">สร้างเนื้อหาด้วย AI</button></form>{% if generated %}<div class="lesson"><div class="split"><h3>ผลลัพธ์จาก AI</h3><button class="secondary no-print" onclick="window.print()">พิมพ์ / บันทึก PDF</button></div><p style="white-space:pre-wrap;line-height:1.8">{{ generated }}</p><p class="small">ผลลัพธ์นี้ยังไม่ได้บันทึกในคลัง ให้คัดลอกเก็บไว้หรือสร้างแผนใหม่แล้วนำเนื้อหาไปวาง</p></div>{% endif %}</div>'''
-    return page('AI Studio', body, generated=generated, kind=kind)
+            generated, _ = build_free_draft(kind, subject, grade, topic, duration)
+    body = r'''<div class="card"><h2>✨ Teaching Studio · ใช้ฟรี</h2><p class="sub">สร้างร่างแผนการสอนหรือโครงคำถามจากแม่แบบภายในแอป ไม่เรียก OpenAI/Gemini API และไม่มีค่า API แต่ไม่ใช่ AI ที่สร้างเนื้อหาใหม่ได้อย่างอิสระ</p><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="field"><label>ต้องการสร้างอะไร</label><select name="kind"><option value="plan" {% if kind=='plan' %}selected{% endif %}>ร่างแผนการสอน</option><option value="quiz" {% if kind=='quiz' %}selected{% endif %}>โครงแบบทดสอบ</option></select></div><div class="layout"><div class="field"><label>วิชา</label><input name="subject" value="{{ request.form.get('subject','') }}" placeholder="เช่น ภาษาไทย"></div><div class="field"><label>ระดับชั้น</label><input name="grade" value="{{ request.form.get('grade','') }}" placeholder="เช่น ป.5"></div></div><div class="field"><label>หัวข้อบทเรียน *</label><input name="topic" required value="{{ request.form.get('topic','') }}" placeholder="เช่น คำควบกล้ำ"></div><div class="field"><label>เวลาเรียน</label><select name="duration">{% for d in ['50 นาที','60 นาที','90 นาที','100 นาที'] %}<option {% if request.form.get('duration','50 นาที')==d %}selected{% endif %}>{{ d }}</option>{% endfor %}</select></div><button class="primary">สร้างร่างจากแม่แบบฟรี</button></form>{% if generated %}<div class="lesson"><div class="split"><h3>ร่างเนื้อหา</h3><button class="secondary no-print" onclick="window.print()">พิมพ์ / บันทึก PDF</button></div><p style="white-space:pre-wrap;line-height:1.8">{{ generated }}</p><p class="small">คัดลอกผลลัพธ์ไปปรับแก้ หรือบันทึกในหน้าสร้างแผน/แบบทดสอบ เนื้อหานี้ยังไม่ได้บันทึกอัตโนมัติ</p></div>{% endif %}</div>'''
+    return page('Teaching Studio', body, generated=generated, kind=kind)
 
 
 @app.route('/quizzes')
@@ -279,7 +279,7 @@ def quiz_new():
         if not title or not questions: flash('กรุณากรอกชื่อชุดและเนื้อหาข้อสอบ', 'error')
         else:
             q=Quiz(user_id=current_user().id,title=title[:180],subject=subject[:120],grade=grade[:80],questions=questions,answer_key=answers); db.session.add(q); db.session.commit(); return redirect(url_for('quiz_view',quiz_id=q.id))
-    body=r'''<div class="card"><h2>สร้างแบบทดสอบ / ใบงาน</h2><p class="sub">พิมพ์ข้อสอบเอง หรือใช้ AI Studio สร้างร่างก่อนแล้วนำมาวางที่นี่</p><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="field"><label>ชื่อชุดแบบทดสอบ *</label><input name="title" required maxlength="180" placeholder="เช่น แบบทดสอบเรื่องเศษส่วน"></div><div class="layout"><div class="field"><label>วิชา</label><input name="subject"></div><div class="field"><label>ระดับชั้น</label><input name="grade"></div></div><div class="field"><label>ข้อสอบ / ใบงาน *</label><textarea name="questions" required style="min-height:220px" placeholder="1. ...\nก. ... ข. ... ค. ... ง. ..."></textarea></div><div class="field"><label>เฉลย (แยกเก็บและเลือกซ่อนตอนพิมพ์ได้)</label><textarea name="answer_key" placeholder="1. ข — เพราะ..."></textarea></div><button class="primary">บันทึกแบบทดสอบ</button></form></div>'''
+    body=r'''<div class="card"><h2>สร้างแบบทดสอบ / ใบงาน</h2><p class="sub">พิมพ์ข้อสอบเอง หรือใช้ Teaching Studio สร้างโครงคำถามแล้วนำมาวางที่นี่</p><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="field"><label>ชื่อชุดแบบทดสอบ *</label><input name="title" required maxlength="180" placeholder="เช่น แบบทดสอบเรื่องเศษส่วน"></div><div class="layout"><div class="field"><label>วิชา</label><input name="subject"></div><div class="field"><label>ระดับชั้น</label><input name="grade"></div></div><div class="field"><label>ข้อสอบ / ใบงาน *</label><textarea name="questions" required style="min-height:220px" placeholder="1. ...\nก. ... ข. ... ค. ... ง. ..."></textarea></div><div class="field"><label>เฉลย (แยกเก็บและเลือกซ่อนตอนพิมพ์ได้)</label><textarea name="answer_key" placeholder="1. ข — เพราะ..."></textarea></div><button class="primary">บันทึกแบบทดสอบ</button></form></div>'''
     return page('สร้างแบบทดสอบ', body)
 
 
