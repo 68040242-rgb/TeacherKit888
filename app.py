@@ -287,7 +287,7 @@ def quiz_new():
 @login_required
 def quiz_view(quiz_id):
     q=Quiz.query.filter_by(id=quiz_id,user_id=current_user().id).first_or_404()
-    body=r'''<div class="card"><div class="welcome"><div><span class="tag">แบบทดสอบ / ใบงาน</span><h2 style="margin-top:10px">{{ q.title }}</h2><p>{{ q.subject }} · {{ q.grade }}</p></div><div class="actions no-print"><button class="primary" onclick="window.print()">พิมพ์ / บันทึก PDF</button><button class="secondary" onclick="document.getElementById('answers').classList.toggle('hidden')">แสดง/ซ่อนเฉลย</button></div></div><div class="lesson"><h3>ข้อสอบ / ใบงาน</h3><p style="white-space:pre-wrap;line-height:1.8">{{ q.questions }}</p></div><div id="answers" class="lesson"><h3>เฉลยสำหรับครู</h3><p style="white-space:pre-wrap;line-height:1.8">{{ q.answer_key or 'ยังไม่ได้ระบุเฉลย' }}</p></div><style>.hidden{display:none}@media print{#answers{display:block!important}}</style></div>'''
+    body=r'''<div class="card"><div class="welcome"><div><span class="tag">แบบทดสอบ / ใบงาน</span><h2 style="margin-top:10px">{{ q.title }}</h2><p>{{ q.subject }} · {{ q.grade }}</p></div><div class="actions no-print"><button class="primary" onclick="window.print()">พิมพ์ / บันทึก PDF</button><button class="secondary" onclick="document.getElementById('answers').classList.toggle('hidden')">แสดง/ซ่อนเฉลย</button></div></div><div class="lesson"><h3>ข้อสอบ / ใบงาน</h3><p style="white-space:pre-wrap;line-height:1.8">{{ q.questions }}</p></div><div id="answers" class="lesson"><h3>เฉลยสำหรับครู</h3><p style="white-space:pre-wrap;line-height:1.8">{{ q.answer_key or 'ยังไม่ได้ระบุเฉลย' }}</p></div><style>.hidden{display:none}@media print { #answers { display:block!important; } }</style></div>'''
     return page('ดูแบบทดสอบ', body, q=q)
 
 
