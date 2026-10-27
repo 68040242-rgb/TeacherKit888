@@ -72,6 +72,19 @@ class TeachingTask(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
 
+class Resource(db.Model):
+    """Curated external resource directory; stores links/metadata, not copied copyrighted content."""
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(220), nullable=False)
+    category = db.Column(db.String(30), nullable=False, index=True)  # quiz or lesson
+    subject = db.Column(db.String(120), nullable=False, default='ทุกวิชา', index=True)
+    grade = db.Column(db.String(80), nullable=False, default='ทุกระดับชั้น', index=True)
+    description = db.Column(db.Text, nullable=False, default='')
+    source = db.Column(db.String(160), nullable=False)
+    url = db.Column(db.String(500), nullable=False, unique=True)
+    verified_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
 STYLE = r'''
 :root{--navy:#172554;--blue:#3157d5;--pale:#eaf0ff;--ink:#202943;--muted:#68738c;--line:#e5e9f2;--bg:#f5f7fc;--green:#13845b;--red:#b42318}
 *{box-sizing:border-box}body{margin:0;font-family:Tahoma,"Noto Sans Thai",sans-serif;background:var(--bg);color:var(--ink)}
@@ -81,7 +94,7 @@ main{max-width:1160px;margin:26px auto;padding:0 20px 40px}.welcome{display:flex
 @media print{header,footer,.no-print,button,.btn{display:none!important}body{background:white;color:#111}main{max-width:none;margin:0;padding:0}.card,.lesson{box-shadow:none;border:0;padding:8px}.print-title{display:block}}
 '''
 
-HEADER = r'''<header><div class="brand"><div class="logo">T</div><div><h1>TeacherKit</h1><p>Smart Teaching Assistant · ผู้ช่วยเตรียมการสอน</p></div></div><nav>{% if current_user %}<a href="{{ url_for('dashboard') }}">หน้าหลัก</a><a href="{{ url_for('new_plan') }}">สร้างแผน</a><a href="{{ url_for('quiz_list') }}">แบบทดสอบ</a><a href="{{ url_for('calendar') }}">ปฏิทิน/งาน</a><a href="{{ url_for('ai_studio') }}">AI Studio</a><a href="{{ url_for('logout') }}">ออกจากระบบ</a>{% else %}<a href="{{ url_for('login') }}">เข้าสู่ระบบ</a><a href="{{ url_for('register') }}">สมัครสมาชิก</a>{% endif %}</nav></header>'''
+HEADER = r'''<header><div class="brand"><div class="logo">T</div><div><h1>TeacherKit</h1><p>Smart Teaching Assistant · ผู้ช่วยเตรียมการสอน</p></div></div><nav>{% if current_user %}<a href="{{ url_for('dashboard') }}">หน้าหลัก</a><a href="{{ url_for('new_plan') }}">สร้างแผน</a><a href="{{ url_for('quiz_list') }}">แบบทดสอบ</a><a href="{{ url_for('resource_library') }}">คลังออนไลน์</a><a href="{{ url_for('calendar') }}">ปฏิทิน/งาน</a><a href="{{ url_for('ai_studio') }}">AI Studio</a><a href="{{ url_for('logout') }}">ออกจากระบบ</a>{% else %}<a href="{{ url_for('login') }}">เข้าสู่ระบบ</a><a href="{{ url_for('register') }}">สมัครสมาชิก</a>{% endif %}</nav></header>'''
 
 
 def current_user():
@@ -332,6 +345,30 @@ def task_delete(task_id):
     t=TeachingTask.query.filter_by(id=task_id,user_id=current_user().id).first_or_404(); db.session.delete(t); db.session.commit(); return redirect(url_for('calendar'))
 
 
+@app.route('/resources')
+def resource_library():
+    """Search a curated directory of external lesson-plan and quiz sources."""
+    q = request.args.get('q', '').strip()[:120]
+    category = request.args.get('category', 'all')
+    grade = request.args.get('grade', 'all')
+    subject = request.args.get('subject', 'all')
+    query = Resource.query
+    if category in ('quiz', 'lesson'):
+        query = query.filter_by(category=category)
+    if grade != 'all':
+        query = query.filter(or_(Resource.grade == grade, Resource.grade == 'ทุกระดับชั้น'))
+    if subject != 'all':
+        query = query.filter(or_(Resource.subject == subject, Resource.subject == 'ทุกวิชา'))
+    if q:
+        like = f'%{q}%'
+        query = query.filter(or_(Resource.title.ilike(like), Resource.description.ilike(like), Resource.subject.ilike(like), Resource.source.ilike(like)))
+    resources = query.order_by(Resource.category.asc(), Resource.source.asc(), Resource.title.asc()).all()
+    body = r'''<section class="welcome"><div><h2>📚 คลังทรัพยากรการสอนออนไลน์</h2><p>ค้นหาแหล่งข้อสอบและแผนการสอน แล้วเปิดอ่านจากเว็บไซต์ต้นฉบับได้ฟรี</p></div><span class="tag">ไม่ใช้ API แบบเสียเงิน</span></section>
+<div class="card"><form method="get"><div class="layout"><div class="field"><label>ค้นหาคำสำคัญ</label><input name="q" value="{{ q }}" placeholder="เช่น วิทยาศาสตร์ ป.6 เศษส่วน"></div><div class="field"><label>ประเภททรัพยากร</label><select name="category"><option value="all" {% if category=='all' %}selected{% endif %}>ทั้งหมด</option><option value="quiz" {% if category=='quiz' %}selected{% endif %}>คลังข้อสอบ</option><option value="lesson" {% if category=='lesson' %}selected{% endif %}>คลังแผนการสอน</option></select></div><div class="field"><label>ระดับชั้น</label><select name="grade"><option value="all">ทุกระดับชั้น</option>{% for g in grades %}<option value="{{ g }}" {% if grade==g %}selected{% endif %}>{{ g }}</option>{% endfor %}</select></div><div class="field"><label>กลุ่มสาระ/วิชา</label><select name="subject"><option value="all">ทุกวิชา</option>{% for sub in subjects %}<option value="{{ sub }}" {% if subject==sub %}selected{% endif %}>{{ sub }}</option>{% endfor %}</select></div></div><div class="actions"><button class="primary">ค้นหาทรัพยากร</button><a class="btn secondary" href="{{ url_for('resource_library') }}">ล้างตัวกรอง</a></div></form></div>
+<div class="split" style="margin-top:20px"><h3>แหล่งเรียนรู้ที่ค้นพบ</h3><span class="small">พบ {{ resources|length }} รายการ</span></div><div class="grid" style="margin-top:12px">{% for r in resources %}<article class="card"><span class="tag">{{ 'คลังข้อสอบ' if r.category=='quiz' else 'คลังแผนการสอน' }}</span><h3 style="margin-top:12px">{{ r.title }}</h3><p class="muted">{{ r.description }}</p><p class="small">วิชา: {{ r.subject }} · ระดับชั้น: {{ r.grade }}</p><p class="small">แหล่งที่มา: {{ r.source }}</p><div class="actions" style="margin-top:14px"><a class="btn primary" href="{{ r.url }}" target="_blank" rel="noopener noreferrer">เปิดเว็บไซต์ต้นฉบับ ↗</a></div></article>{% else %}<div class="card empty">ไม่พบรายการ ลองเปลี่ยนคำค้นหรือเลือกทุกระดับชั้น</div>{% endfor %}</div><p class="small" style="margin-top:18px">TeacherKit เก็บข้อมูลอ้างอิงและลิงก์เท่านั้น เนื้อหาและสิทธิ์การเข้าถึงเป็นไปตามเว็บไซต์ต้นทาง โปรดตรวจสอบก่อนนำไปใช้หรือเผยแพร่</p>'''
+    return page('คลังทรัพยากรออนไลน์', body, resources=resources, q=q, category=category, grade=grade, subject=subject, grades=['อนุบาล','ประถมศึกษาตอนต้น','ประถมศึกษาตอนปลาย','มัธยมศึกษาตอนต้น','มัธยมศึกษาตอนปลาย'], subjects=['ภาษาไทย','คณิตศาสตร์','วิทยาศาสตร์','ภาษาอังกฤษ','สังคมศึกษา','ทุกวิชา'])
+
+
 @app.errorhandler(404)
 def not_found(_error):
     return page('ไม่พบหน้า', '<div class="card"><h2>ไม่พบหน้าที่ต้องการ</h2><a class="btn primary" href="/">กลับหน้าหลัก</a></div>'), 404
@@ -340,6 +377,18 @@ def not_found(_error):
 with app.app_context():
     # Creates only missing tables; does not drop existing users or lesson plans.
     db.create_all()
+    # Seed curated public sources once. These are source links, not copied content.
+    starter_resources = [
+        dict(title='DLTV: แผนการจัดการเรียนรู้', category='lesson', subject='ทุกวิชา', grade='ทุกระดับชั้น', description='แหล่งแผนการจัดการเรียนรู้และสื่อประกอบจากการศึกษาทางไกลผ่านดาวเทียม', source='DLTV', url='https://dltv.ac.th/downloads?t=teachplan'),
+        dict(title='DLTV: บทเรียนและสื่อการเรียนรู้', category='lesson', subject='ทุกวิชา', grade='ทุกระดับชั้น', description='ค้นคว้าบทเรียนและสื่อประกอบเพื่อใช้วางแผนการสอน', source='DLTV', url='https://dltv.ac.th/'),
+        dict(title='SIBS: ระบบคลังข้อสอบมาตรฐาน', category='quiz', subject='ทุกวิชา', grade='ทุกระดับชั้น', description='แหล่งระบบคลังข้อสอบมาตรฐาน การเข้าถึงบางส่วนอาจต้องเข้าสู่ระบบ', source='สพฐ. SIBS', url='https://itembank.obec.go.th/sibs/'),
+        dict(title='IPST Learning Space: คลังความรู้', category='lesson', subject='วิทยาศาสตร์', grade='ทุกระดับชั้น', description='สื่อและความรู้ด้านวิทยาศาสตร์ คณิตศาสตร์ และเทคโนโลยีเพื่อประกอบการเรียนการสอน', source='สสวท.', url='https://learningspace.ipst.ac.th/'),
+        dict(title='คลังสื่อการเรียนรู้ สสวท.', category='quiz', subject='วิทยาศาสตร์', grade='ทุกระดับชั้น', description='ค้นหาแหล่งความรู้และสื่อประกอบกิจกรรมหรือคำถามทบทวน โดยตรวจเงื่อนไขของต้นทาง', source='สสวท.', url='https://www.ipst.ac.th/'),
+    ]
+    for item in starter_resources:
+        if not Resource.query.filter_by(url=item['url']).first():
+            db.session.add(Resource(**item))
+    db.session.commit()
 
 if __name__ == '__main__':
     app.run(debug=False)
