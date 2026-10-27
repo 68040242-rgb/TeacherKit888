@@ -3,4 +3,3 @@ Flask-SQLAlchemy
 Flask-WTF
 gunicorn
 psycopg[binary]
-openai
