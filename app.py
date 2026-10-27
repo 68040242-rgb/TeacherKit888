@@ -43,7 +43,7 @@ class LessonPlan(db.Model):
     subject = db.Column(db.String(120), nullable=False)
     grade = db.Column(db.String(80), nullable=False)
     topic = db.Column(db.String(180), nullable=False)
-    duration = db.Column(db.String(40), nullable=False, default="50 เธเธฒเธ—เธต")
+    duration = db.Column(db.String(40), nullable=False, default="50 นาที")
     objectives = db.Column(db.Text, nullable=False, default="")
     activities = db.Column(db.Text, nullable=False, default="")
     materials = db.Column(db.Text, nullable=False, default="")
@@ -72,15 +72,15 @@ button,.btn{display:inline-block;border:0;border-radius:9px;padding:11px 15px;fo
 
 HEADER = r"""
 <header>
-  <div class="brand"><div class="logo">T</div><div><h1>TeacherKit</h1><p>Smart Teaching Assistant ยท เธเธนเนเธเนเธงเธขเน€เธ•เธฃเธตเธขเธกเธเธฒเธฃเธชเธญเธ</p></div></div>
+  <div class="brand"><div class="logo">T</div><div><h1>TeacherKit</h1><p>Smart Teaching Assistant · ผู้ช่วยเตรียมการสอน</p></div></div>
   <nav>
   {% if current_user %}
-    <a href="{{ url_for('dashboard') }}">เธซเธเนเธฒเธซเธฅเธฑเธ</a>
-    <a href="{{ url_for('new_plan') }}">เธชเธฃเนเธฒเธเนเธเธเธเธฒเธฃเธชเธญเธ</a>
-    <a href="{{ url_for('logout') }}">เธญเธญเธเธเธฒเธเธฃเธฐเธเธ</a>
+    <a href="{{ url_for('dashboard') }}">หน้าหลัก</a>
+    <a href="{{ url_for('new_plan') }}">สร้างแผนการสอน</a>
+    <a href="{{ url_for('logout') }}">ออกจากระบบ</a>
   {% else %}
-    <a href="{{ url_for('login') }}">เน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธ</a>
-    <a href="{{ url_for('register') }}">เธชเธกเธฑเธเธฃเธชเธกเธฒเธเธดเธ</a>
+    <a href="{{ url_for('login') }}">เข้าสู่ระบบ</a>
+    <a href="{{ url_for('register') }}">สมัครสมาชิก</a>
   {% endif %}
   </nav>
 </header>
@@ -95,7 +95,7 @@ def render_page(title, body, **context):
         {% for category, message in messages %}<div class="flash {{ 'error' if category == 'error' else '' }}">{{ message }}</div>{% endfor %}
       {% endwith %}
       """ + body + """
-    </main><footer>TeacherKit ยท เธงเธฒเธเนเธเธเธเธฒเธฃเธชเธญเธเธญเธขเนเธฒเธเน€เธเนเธเธฃเธฐเธเธ</footer></body></html>"""
+    </main><footer>TeacherKit · วางแผนการสอนอย่างเป็นระบบ</footer></body></html>"""
     return render_template_string(template, title=title, current_user=get_current_user(), **context)
 
 def get_current_user():
@@ -109,7 +109,7 @@ def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if not get_current_user():
-            flash("เธเธฃเธธเธ“เธฒเน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธเธเนเธญเธเนเธเนเธเธฒเธ", "error")
+            flash("กรุณาเข้าสู่ระบบก่อนใช้งาน", "error")
             return redirect(url_for("login"))
         return view(*args, **kwargs)
     return wrapped
@@ -119,17 +119,17 @@ def index():
     if get_current_user():
         return redirect(url_for("dashboard"))
     body = r"""
-    <section class="welcome"><div><h2>เน€เธ•เธฃเธตเธขเธกเธเธฒเธฃเธชเธญเธเนเธซเนเธเนเธฒเธขเธเธถเนเธเนเธเธ—เธตเนเน€เธ”เธตเธขเธง ๐“</h2>
-    <p class="muted">เธชเธฃเนเธฒเธเนเธเธเธเธฒเธฃเธชเธญเธ เธเธฑเธ”เธเธดเธเธเธฃเธฃเธก เธงเธฒเธเนเธเธเธชเธทเนเธญ เนเธฅเธฐเธเธฑเธเธ—เธถเธเธเนเธญเธกเธนเธฅเนเธขเธเธ•เธฒเธกเธเธฑเธเธเธตเธเธนเนเนเธเน</p></div></section>
+    <section class="welcome"><div><h2>เตรียมการสอนให้ง่ายขึ้นในที่เดียว 📚</h2>
+    <p class="muted">สร้างแผนการสอน จัดกิจกรรม วางแผนสื่อ และบันทึกข้อมูลแยกตามบัญชีผู้ใช้</p></div></section>
     <div class="grid">
-      <div class="card"><h3>๐“ เนเธเธเธเธฒเธฃเธชเธญเธ</h3><p class="muted">เธเธฑเธเธ—เธถเธเธงเธดเธเธฒ เธฃเธฐเธ”เธฑเธเธเธฑเนเธ เธซเธฑเธงเธเนเธญ เนเธฅเธฐเธเธธเธ”เธเธฃเธฐเธชเธเธเนเธเธฒเธฃเน€เธฃเธตเธขเธเธฃเธนเน</p></div>
-      <div class="card"><h3>๐ฏ เธเธดเธเธเธฃเธฃเธกเธเธฒเธฃเน€เธฃเธตเธขเธเธฃเธนเน</h3><p class="muted">เธงเธฒเธเธเธฑเนเธเธเธณเน€เธเนเธฒเธชเธนเนเธเธ—เน€เธฃเธตเธขเธ เธเธฑเนเธเธชเธญเธ เนเธฅเธฐเธเธฑเนเธเธชเธฃเธธเธ</p></div>
-      <div class="card"><h3>๐” เธเธฑเธเธเธตเธชเนเธงเธเธ•เธฑเธง</h3><p class="muted">เธชเธกเธฑเธเธฃเธชเธกเธฒเธเธดเธเนเธฅเธฐเน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธ เน€เธเธทเนเธญเธ”เธนเนเธเธเธเธญเธเธเธฑเธเธเธตเธ•เธฑเธงเน€เธญเธ</p></div>
+      <div class="card"><h3>📝 แผนการสอน</h3><p class="muted">บันทึกวิชา ระดับชั้น หัวข้อ และจุดประสงค์การเรียนรู้</p></div>
+      <div class="card"><h3>🎯 กิจกรรมการเรียนรู้</h3><p class="muted">วางขั้นนำเข้าสู่บทเรียน ขั้นสอน และขั้นสรุป</p></div>
+      <div class="card"><h3>🔐 บัญชีส่วนตัว</h3><p class="muted">สมัครสมาชิกและเข้าสู่ระบบ เพื่อดูแผนของบัญชีตัวเอง</p></div>
     </div>
-    <div class="card" style="margin-top:18px"><h3>เน€เธฃเธดเนเธกเธ•เนเธเนเธเนเธเธฒเธ TeacherKit</h3><p class="muted">เธชเธฃเนเธฒเธเธเธฑเธเธเธตเน€เธเธทเนเธญเธเธฑเธเธ—เธถเธเนเธฅเธฐเธเธฅเธฑเธเธกเธฒเธ”เธนเนเธเธเธเธฒเธฃเธชเธญเธเนเธ”เนเนเธเธ เธฒเธขเธซเธฅเธฑเธ</p>
-    <div class="actions" style="margin-top:16px"><a class="btn primary" href="{{ url_for('register') }}">เธชเธกเธฑเธเธฃเธชเธกเธฒเธเธดเธเธเธฃเธต</a><a class="btn secondary" href="{{ url_for('login') }}">เธกเธตเธเธฑเธเธเธตเนเธฅเนเธง ยท เน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธ</a></div></div>
+    <div class="card" style="margin-top:18px"><h3>เริ่มต้นใช้งาน TeacherKit</h3><p class="muted">สร้างบัญชีเพื่อบันทึกและกลับมาดูแผนการสอนได้ในภายหลัง</p>
+    <div class="actions" style="margin-top:16px"><a class="btn primary" href="{{ url_for('register') }}">สมัครสมาชิกฟรี</a><a class="btn secondary" href="{{ url_for('login') }}">มีบัญชีแล้ว · เข้าสู่ระบบ</a></div></div>
     """
-    return render_page("เธซเธเนเธฒเธซเธฅเธฑเธ", body)
+    return render_page("หน้าหลัก", body)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -141,35 +141,35 @@ def register():
         password = request.form.get("password", "")
         confirm = request.form.get("confirm", "")
         if not name or len(name) > 80:
-            flash("เธเธฃเธธเธ“เธฒเธเธฃเธญเธเธเธทเนเธญเนเธกเนเน€เธเธดเธ 80 เธ•เธฑเธงเธญเธฑเธเธฉเธฃ", "error")
+            flash("กรุณากรอกชื่อไม่เกิน 80 ตัวอักษร", "error")
         elif not email or "@" not in email or len(email) > 160:
-            flash("เธเธฃเธธเธ“เธฒเธเธฃเธญเธเธญเธตเน€เธกเธฅเนเธซเนเธ–เธนเธเธ•เนเธญเธ", "error")
+            flash("กรุณากรอกอีเมลให้ถูกต้อง", "error")
         elif len(password) < 8:
-            flash("เธฃเธซเธฑเธชเธเนเธฒเธเธ•เนเธญเธเธกเธตเธญเธขเนเธฒเธเธเนเธญเธข 8 เธ•เธฑเธงเธญเธฑเธเธฉเธฃ", "error")
+            flash("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร", "error")
         elif password != confirm:
-            flash("เธฃเธซเธฑเธชเธเนเธฒเธเธ—เธฑเนเธเธชเธญเธเธเนเธญเธเนเธกเนเธ•เธฃเธเธเธฑเธ", "error")
+            flash("รหัสผ่านทั้งสองช่องไม่ตรงกัน", "error")
         elif User.query.filter_by(email=email).first():
-            flash("เธญเธตเน€เธกเธฅเธเธตเนเธกเธตเธเธฑเธเธเธตเนเธฅเนเธง เธเธฃเธธเธ“เธฒเน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธ", "error")
+            flash("อีเมลนี้มีบัญชีแล้ว กรุณาเข้าสู่ระบบ", "error")
         else:
             user = User(name=name, email=email, password_hash=generate_password_hash(password))
             db.session.add(user)
             db.session.commit()
             session.clear()
             session["user_id"] = user.id
-            flash("เธชเธกเธฑเธเธฃเธชเธกเธฒเธเธดเธเธชเธณเน€เธฃเนเธ เธขเธดเธเธ”เธตเธ•เนเธญเธเธฃเธฑเธเธชเธนเน TeacherKit")
+            flash("สมัครสมาชิกสำเร็จ ยินดีต้อนรับสู่ TeacherKit")
             return redirect(url_for("dashboard"))
     body = r"""
-    <div class="auth-wrap"><div class="card"><h2>เธชเธฃเนเธฒเธเธเธฑเธเธเธต TeacherKit</h2><p class="sub">เธชเธกเธฑเธเธฃเธชเธกเธฒเธเธดเธเน€เธเธทเนเธญเธเธฑเธเธ—เธถเธเนเธเธเธเธฒเธฃเธชเธญเธเธเธญเธเธเธธเธ“</p>
+    <div class="auth-wrap"><div class="card"><h2>สร้างบัญชี TeacherKit</h2><p class="sub">สมัครสมาชิกเพื่อบันทึกแผนการสอนของคุณ</p>
     <form method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="field"><label>เธเธทเนเธญเธ—เธตเนเนเธเนเนเธชเธ”เธ</label><input name="name" required maxlength="80" autocomplete="name" value="{{ request.form.get('name','') }}"></div>
-      <div class="field"><label>เธญเธตเน€เธกเธฅ</label><input type="email" name="email" required maxlength="160" autocomplete="email" value="{{ request.form.get('email','') }}"></div>
-      <div class="field"><label>เธฃเธซเธฑเธชเธเนเธฒเธ (เธญเธขเนเธฒเธเธเนเธญเธข 8 เธ•เธฑเธงเธญเธฑเธเธฉเธฃ)</label><input type="password" name="password" required minlength="8" autocomplete="new-password"></div>
-      <div class="field"><label>เธขเธทเธเธขเธฑเธเธฃเธซเธฑเธชเธเนเธฒเธ</label><input type="password" name="confirm" required minlength="8" autocomplete="new-password"></div>
-      <button class="primary" type="submit" style="width:100%">เธชเธกเธฑเธเธฃเธชเธกเธฒเธเธดเธ</button>
-    </form><div class="switch">เธกเธตเธเธฑเธเธเธตเนเธฅเนเธง? <a href="{{ url_for('login') }}">เน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธ</a></div></div></div>
+      <div class="field"><label>ชื่อที่ใช้แสดง</label><input name="name" required maxlength="80" autocomplete="name" value="{{ request.form.get('name','') }}"></div>
+      <div class="field"><label>อีเมล</label><input type="email" name="email" required maxlength="160" autocomplete="email" value="{{ request.form.get('email','') }}"></div>
+      <div class="field"><label>รหัสผ่าน (อย่างน้อย 8 ตัวอักษร)</label><input type="password" name="password" required minlength="8" autocomplete="new-password"></div>
+      <div class="field"><label>ยืนยันรหัสผ่าน</label><input type="password" name="confirm" required minlength="8" autocomplete="new-password"></div>
+      <button class="primary" type="submit" style="width:100%">สมัครสมาชิก</button>
+    </form><div class="switch">มีบัญชีแล้ว? <a href="{{ url_for('login') }}">เข้าสู่ระบบ</a></div></div></div>
     """
-    return render_page("เธชเธกเธฑเธเธฃเธชเธกเธฒเธเธดเธ", body)
+    return render_page("สมัครสมาชิก", body)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -182,24 +182,24 @@ def login():
         if user and check_password_hash(user.password_hash, password):
             session.clear()
             session["user_id"] = user.id
-            flash("เน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธเธชเธณเน€เธฃเนเธ")
+            flash("เข้าสู่ระบบสำเร็จ")
             return redirect(url_for("dashboard"))
-        flash("เธญเธตเน€เธกเธฅเธซเธฃเธทเธญเธฃเธซเธฑเธชเธเนเธฒเธเนเธกเนเธ–เธนเธเธ•เนเธญเธ", "error")
+        flash("อีเมลหรือรหัสผ่านไม่ถูกต้อง", "error")
     body = r"""
-    <div class="auth-wrap"><div class="card"><h2>เน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธ</h2><p class="sub">เน€เธเนเธฒเธชเธนเนเธเธฑเธเธเธตเน€เธเธทเนเธญเธเธฑเธ”เธเธฒเธฃเนเธเธเธเธฒเธฃเธชเธญเธเธเธญเธเธเธธเธ“</p>
+    <div class="auth-wrap"><div class="card"><h2>เข้าสู่ระบบ</h2><p class="sub">เข้าสู่บัญชีเพื่อจัดการแผนการสอนของคุณ</p>
     <form method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="field"><label>เธญเธตเน€เธกเธฅ</label><input type="email" name="email" required autocomplete="email" value="{{ request.form.get('email','') }}"></div>
-      <div class="field"><label>เธฃเธซเธฑเธชเธเนเธฒเธ</label><input type="password" name="password" required autocomplete="current-password"></div>
-      <button class="primary" type="submit" style="width:100%">เน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธ</button>
-    </form><div class="switch">เธขเธฑเธเนเธกเนเธกเธตเธเธฑเธเธเธต? <a href="{{ url_for('register') }}">เธชเธกเธฑเธเธฃเธชเธกเธฒเธเธดเธ</a></div></div></div>
+      <div class="field"><label>อีเมล</label><input type="email" name="email" required autocomplete="email" value="{{ request.form.get('email','') }}"></div>
+      <div class="field"><label>รหัสผ่าน</label><input type="password" name="password" required autocomplete="current-password"></div>
+      <button class="primary" type="submit" style="width:100%">เข้าสู่ระบบ</button>
+    </form><div class="switch">ยังไม่มีบัญชี? <a href="{{ url_for('register') }}">สมัครสมาชิก</a></div></div></div>
     """
-    return render_page("เน€เธเนเธฒเธชเธนเนเธฃเธฐเธเธ", body)
+    return render_page("เข้าสู่ระบบ", body)
 
 @app.route("/logout")
 def logout():
     session.clear()
-    flash("เธญเธญเธเธเธฒเธเธฃเธฐเธเธเนเธฅเนเธง")
+    flash("ออกจากระบบแล้ว")
     return redirect(url_for("index"))
 
 @app.route("/dashboard")
@@ -208,27 +208,27 @@ def dashboard():
     user = get_current_user()
     plans = LessonPlan.query.filter_by(user_id=user.id).order_by(LessonPlan.created_at.desc()).all()
     body = r"""
-    <section class="welcome"><div><h2>เธชเธงเธฑเธชเธ”เธต {{ current_user.name }} ๐‘</h2><p class="muted">เธเธทเนเธเธ—เธตเนเธเธฑเธ”เธเธฒเธฃเธเธฒเธฃเน€เธ•เธฃเธตเธขเธกเธเธฒเธฃเธชเธญเธเธเธญเธเธเธธเธ“</p></div>
-    <a class="btn primary" href="{{ url_for('new_plan') }}">+ เธชเธฃเนเธฒเธเนเธเธเธเธฒเธฃเธชเธญเธ</a></section>
+    <section class="welcome"><div><h2>สวัสดี {{ current_user.name }} 👋</h2><p class="muted">พื้นที่จัดการการเตรียมการสอนของคุณ</p></div>
+    <a class="btn primary" href="{{ url_for('new_plan') }}">+ สร้างแผนการสอน</a></section>
     <div class="grid" style="margin-bottom:20px">
-      <div class="stat"><div class="label">เนเธเธเธเธฒเธฃเธชเธญเธเธ—เธฑเนเธเธซเธกเธ”</div><div class="num">{{ plans|length }}</div></div>
-      <div class="stat"><div class="label">เธเธฑเธเธเธตเธเธนเนเนเธเน</div><div class="num" style="font-size:20px">เธขเธทเธเธขเธฑเธเธ”เนเธงเธขเธญเธตเน€เธกเธฅ</div></div>
-      <div class="stat"><div class="label">เธเนเธญเธกเธนเธฅเธเธญเธเธเธธเธ“</div><div class="num" style="font-size:20px">เธชเนเธงเธเธ•เธฑเธง</div></div>
+      <div class="stat"><div class="label">แผนการสอนทั้งหมด</div><div class="num">{{ plans|length }}</div></div>
+      <div class="stat"><div class="label">บัญชีผู้ใช้</div><div class="num" style="font-size:20px">ยืนยันด้วยอีเมล</div></div>
+      <div class="stat"><div class="label">ข้อมูลของคุณ</div><div class="num" style="font-size:20px">ส่วนตัว</div></div>
     </div>
-    <div class="card"><h3>เนเธเธเธเธฒเธฃเธชเธญเธเธเธญเธเธเธฑเธ</h3><p class="sub">เธกเธตเน€เธเธตเธขเธเธเธฑเธเธเธตเธเธญเธเธเธธเธ“เน€เธ—เนเธฒเธเธฑเนเธเธ—เธตเนเน€เธซเนเธเนเธฅเธฐเธเธฑเธ”เธเธฒเธฃเนเธเธเน€เธซเธฅเนเธฒเธเธตเนเนเธ”เน</p>
+    <div class="card"><h3>แผนการสอนของฉัน</h3><p class="sub">มีเพียงบัญชีของคุณเท่านั้นที่เห็นและจัดการแผนเหล่านี้ได้</p>
     {% if plans %}
       {% for p in plans %}
-      <div class="lesson"><h4>{{ p.topic }}</h4><small>{{ p.subject }} ยท {{ p.grade }} ยท {{ p.duration }} ยท {{ p.created_at.strftime('%d/%m/%Y') }}</small>
-      <p><b>เธเธธเธ”เธเธฃเธฐเธชเธเธเน:</b> {{ p.objectives or 'เธขเธฑเธเนเธกเนเนเธ”เนเธฃเธฐเธเธธ' }}</p>
-      <div class="actions"><a class="btn secondary" href="{{ url_for('view_plan', plan_id=p.id) }}">เน€เธเธดเธ”เนเธเธ</a>
-      <form method="post" action="{{ url_for('delete_plan', plan_id=p.id) }}" onsubmit="return confirm('เธขเธทเธเธขเธฑเธเธฅเธเนเธเธเธเธตเนเธซเธฃเธทเธญเนเธกเน?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="danger" type="submit">เธฅเธเนเธเธ</button></form></div></div>
+      <div class="lesson"><h4>{{ p.topic }}</h4><small>{{ p.subject }} · {{ p.grade }} · {{ p.duration }} · {{ p.created_at.strftime('%d/%m/%Y') }}</small>
+      <p><b>จุดประสงค์:</b> {{ p.objectives or 'ยังไม่ได้ระบุ' }}</p>
+      <div class="actions"><a class="btn secondary" href="{{ url_for('view_plan', plan_id=p.id) }}">เปิดแผน</a>
+      <form method="post" action="{{ url_for('delete_plan', plan_id=p.id) }}" onsubmit="return confirm('ยืนยันลบแผนนี้หรือไม่?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="danger" type="submit">ลบแผน</button></form></div></div>
       {% endfor %}
     {% else %}
-      <div class="empty">เธขเธฑเธเนเธกเนเธกเธตเนเธเธเธเธฒเธฃเธชเธญเธ เธเธ” โ€เธชเธฃเนเธฒเธเนเธเธเธเธฒเธฃเธชเธญเธโ€ เน€เธเธทเนเธญเน€เธฃเธดเนเธกเธ•เนเธ</div>
+      <div class="empty">ยังไม่มีแผนการสอน กด “สร้างแผนการสอน” เพื่อเริ่มต้น</div>
     {% endif %}
     </div>
     """
-    return render_page("เธซเธเนเธฒเธซเธฅเธฑเธเธเธญเธเธเธฑเธ", body, plans=plans)
+    return render_page("หน้าหลักของฉัน", body, plans=plans)
 
 @app.route("/plans/new", methods=["GET", "POST"])
 @login_required
@@ -237,14 +237,14 @@ def new_plan():
         required = ["subject", "grade", "topic"]
         values = {key: request.form.get(key, "").strip() for key in required}
         if any(not values[k] for k in required):
-            flash("เธเธฃเธธเธ“เธฒเธเธฃเธญเธเธฃเธฒเธขเธงเธดเธเธฒ เธฃเธฐเธ”เธฑเธเธเธฑเนเธ เนเธฅเธฐเธซเธฑเธงเธเนเธญเธเธ—เน€เธฃเธตเธขเธ", "error")
+            flash("กรุณากรอกรายวิชา ระดับชั้น และหัวข้อบทเรียน", "error")
         else:
             plan = LessonPlan(
                 user_id=get_current_user().id,
                 subject=values["subject"][:120],
                 grade=values["grade"][:80],
                 topic=values["topic"][:180],
-                duration=request.form.get("duration", "50 เธเธฒเธ—เธต")[:40],
+                duration=request.form.get("duration", "50 นาที")[:40],
                 objectives=request.form.get("objectives", "").strip(),
                 activities=request.form.get("activities", "").strip(),
                 materials=request.form.get("materials", "").strip(),
@@ -252,41 +252,41 @@ def new_plan():
             )
             db.session.add(plan)
             db.session.commit()
-            flash("เธเธฑเธเธ—เธถเธเนเธเธเธเธฒเธฃเธชเธญเธเนเธฅเนเธง")
+            flash("บันทึกแผนการสอนแล้ว")
             return redirect(url_for("view_plan", plan_id=plan.id))
     body = r"""
-    <div class="card"><h2 style="margin-top:0">เธชเธฃเนเธฒเธเนเธเธเธเธฒเธฃเธชเธญเธเนเธซเธกเน</h2><p class="sub">เธเธฃเธญเธเธเนเธญเธกเธนเธฅเน€เธเธทเนเธญเธเธฑเธเธ—เธถเธเนเธเธเธเธฒเธฃเธชเธญเธเนเธเธเธฑเธเธเธตเธเธญเธเธเธธเธ“</p>
+    <div class="card"><h2 style="margin-top:0">สร้างแผนการสอนใหม่</h2><p class="sub">กรอกข้อมูลเพื่อบันทึกแผนการสอนในบัญชีของคุณ</p>
     <form method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="layout">
-        <div class="field"><label>เธฃเธฒเธขเธงเธดเธเธฒ *</label><input name="subject" required maxlength="120" placeholder="เน€เธเนเธ เธงเธดเธ—เธขเธฒเธเธฒเธฃเธเธณเธเธงเธ“" value="{{ request.form.get('subject','') }}"></div>
-        <div class="field"><label>เธฃเธฐเธ”เธฑเธเธเธฑเนเธ *</label><input name="grade" required maxlength="80" placeholder="เน€เธเนเธ เธก.2" value="{{ request.form.get('grade','') }}"></div>
-        <div class="field"><label>เธซเธฑเธงเธเนเธญเธเธ—เน€เธฃเธตเธขเธ *</label><input name="topic" required maxlength="180" placeholder="เน€เธเนเธ เธเธฒเธฃเธเธดเธ”เน€เธเธดเธเธ•เธฃเธฃเธเธฐ" value="{{ request.form.get('topic','') }}"></div>
-        <div class="field"><label>เธฃเธฐเธขเธฐเน€เธงเธฅเธฒ</label><select name="duration">{% for d in ['50 เธเธฒเธ—เธต','60 เธเธฒเธ—เธต','90 เธเธฒเธ—เธต','100 เธเธฒเธ—เธต','120 เธเธฒเธ—เธต'] %}<option {% if request.form.get('duration','50 เธเธฒเธ—เธต')==d %}selected{% endif %}>{{ d }}</option>{% endfor %}</select></div>
+        <div class="field"><label>รายวิชา *</label><input name="subject" required maxlength="120" placeholder="เช่น วิทยาการคำนวณ" value="{{ request.form.get('subject','') }}"></div>
+        <div class="field"><label>ระดับชั้น *</label><input name="grade" required maxlength="80" placeholder="เช่น ม.2" value="{{ request.form.get('grade','') }}"></div>
+        <div class="field"><label>หัวข้อบทเรียน *</label><input name="topic" required maxlength="180" placeholder="เช่น การคิดเชิงตรรกะ" value="{{ request.form.get('topic','') }}"></div>
+        <div class="field"><label>ระยะเวลา</label><select name="duration">{% for d in ['50 นาที','60 นาที','90 นาที','100 นาที','120 นาที'] %}<option {% if request.form.get('duration','50 นาที')==d %}selected{% endif %}>{{ d }}</option>{% endfor %}</select></div>
       </div>
-      <div class="field"><label>เธเธธเธ”เธเธฃเธฐเธชเธเธเนเธเธฒเธฃเน€เธฃเธตเธขเธเธฃเธนเน</label><textarea name="objectives" placeholder="เน€เธกเธทเนเธญเธเธเธเธ—เน€เธฃเธตเธขเธ เธเธนเนเน€เธฃเธตเธขเธเธเธฐเธชเธฒเธกเธฒเธฃเธ–...">{{ request.form.get('objectives','') }}</textarea></div>
-      <div class="field"><label>เธเธดเธเธเธฃเธฃเธกเธเธฒเธฃเน€เธฃเธตเธขเธเธฃเธนเน / เธเธฑเนเธเธ•เธญเธเธเธฒเธฃเธชเธญเธ</label><textarea name="activities" placeholder="1. เธเธฑเนเธเธเธณเน€เธเนเธฒเธชเธนเนเธเธ—เน€เธฃเธตเธขเธ&#10;2. เธเธฑเนเธเธเธฑเธ”เธเธดเธเธเธฃเธฃเธก&#10;3. เธเธฑเนเธเธชเธฃเธธเธ">{{ request.form.get('activities','') }}</textarea></div>
-      <div class="field"><label>เธชเธทเนเธญเนเธฅเธฐเธญเธธเธเธเธฃเธ“เน</label><textarea name="materials" placeholder="เน€เธเนเธ เธชเนเธฅเธ”เน เนเธเธเธฒเธ เธงเธดเธ”เธตเนเธญ เธญเธธเธเธเธฃเธ“เน">{{ request.form.get('materials','') }}</textarea></div>
-      <div class="field"><label>เธเธฒเธฃเธงเธฑเธ”เนเธฅเธฐเธเธฃเธฐเน€เธกเธดเธเธเธฅ</label><textarea name="assessment" placeholder="เน€เธเนเธ เธ•เธฃเธงเธเนเธเธเธฒเธ เธชเธฑเธเน€เธเธ•เธเธฒเธฃเธ—เธณเธเธฒเธเธเธฅเธธเนเธก เนเธเธเธ—เธ”เธชเธญเธเธ—เนเธฒเธขเธเธ—">{{ request.form.get('assessment','') }}</textarea></div>
-      <div class="actions"><button class="primary" type="submit">เธเธฑเธเธ—เธถเธเนเธเธเธเธฒเธฃเธชเธญเธ</button><a class="btn secondary" href="{{ url_for('dashboard') }}">เธขเธเน€เธฅเธดเธ</a></div>
+      <div class="field"><label>จุดประสงค์การเรียนรู้</label><textarea name="objectives" placeholder="เมื่อจบบทเรียน ผู้เรียนจะสามารถ...">{{ request.form.get('objectives','') }}</textarea></div>
+      <div class="field"><label>กิจกรรมการเรียนรู้ / ขั้นตอนการสอน</label><textarea name="activities" placeholder="1. ขั้นนำเข้าสู่บทเรียน&#10;2. ขั้นจัดกิจกรรม&#10;3. ขั้นสรุป">{{ request.form.get('activities','') }}</textarea></div>
+      <div class="field"><label>สื่อและอุปกรณ์</label><textarea name="materials" placeholder="เช่น สไลด์ ใบงาน วิดีโอ อุปกรณ์">{{ request.form.get('materials','') }}</textarea></div>
+      <div class="field"><label>การวัดและประเมินผล</label><textarea name="assessment" placeholder="เช่น ตรวจใบงาน สังเกตการทำงานกลุ่ม แบบทดสอบท้ายบท">{{ request.form.get('assessment','') }}</textarea></div>
+      <div class="actions"><button class="primary" type="submit">บันทึกแผนการสอน</button><a class="btn secondary" href="{{ url_for('dashboard') }}">ยกเลิก</a></div>
     </form></div>
     """
-    return render_page("เธชเธฃเนเธฒเธเนเธเธเธเธฒเธฃเธชเธญเธ", body)
+    return render_page("สร้างแผนการสอน", body)
 
 @app.route("/plans/<int:plan_id>")
 @login_required
 def view_plan(plan_id):
     plan = LessonPlan.query.filter_by(id=plan_id, user_id=get_current_user().id).first_or_404()
     body = r"""
-    <div class="card"><div class="welcome"><div><span class="tag">เนเธเธเธเธฒเธฃเธชเธญเธ</span><h2 style="margin-top:10px">{{ plan.topic }}</h2><p class="muted">{{ plan.subject }} ยท {{ plan.grade }} ยท {{ plan.duration }}</p></div><a class="btn secondary" href="{{ url_for('dashboard') }}">เธเธฅเธฑเธเธซเธเนเธฒเธซเธฅเธฑเธ</a></div>
-    <div class="lesson"><h3>เธเธธเธ”เธเธฃเธฐเธชเธเธเนเธเธฒเธฃเน€เธฃเธตเธขเธเธฃเธนเน</h3><p>{{ plan.objectives or 'เธขเธฑเธเนเธกเนเนเธ”เนเธฃเธฐเธเธธ' }}</p></div>
-    <div class="lesson"><h3>เธเธดเธเธเธฃเธฃเธกเธเธฒเธฃเน€เธฃเธตเธขเธเธฃเธนเน / เธเธฑเนเธเธ•เธญเธเธเธฒเธฃเธชเธญเธ</h3><p>{{ plan.activities or 'เธขเธฑเธเนเธกเนเนเธ”เนเธฃเธฐเธเธธ' }}</p></div>
-    <div class="lesson"><h3>เธชเธทเนเธญเนเธฅเธฐเธญเธธเธเธเธฃเธ“เน</h3><p>{{ plan.materials or 'เธขเธฑเธเนเธกเนเนเธ”เนเธฃเธฐเธเธธ' }}</p></div>
-    <div class="lesson"><h3>เธเธฒเธฃเธงเธฑเธ”เนเธฅเธฐเธเธฃเธฐเน€เธกเธดเธเธเธฅ</h3><p>{{ plan.assessment or 'เธขเธฑเธเนเธกเนเนเธ”เนเธฃเธฐเธเธธ' }}</p></div>
-    <p class="muted">เธชเธฃเนเธฒเธเน€เธกเธทเนเธญ {{ plan.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
-    <button class="primary" onclick="window.print()">เธเธดเธกเธเน / เธเธฑเธเธ—เธถเธเน€เธเนเธ PDF</button></div>
+    <div class="card"><div class="welcome"><div><span class="tag">แผนการสอน</span><h2 style="margin-top:10px">{{ plan.topic }}</h2><p class="muted">{{ plan.subject }} · {{ plan.grade }} · {{ plan.duration }}</p></div><a class="btn secondary" href="{{ url_for('dashboard') }}">กลับหน้าหลัก</a></div>
+    <div class="lesson"><h3>จุดประสงค์การเรียนรู้</h3><p>{{ plan.objectives or 'ยังไม่ได้ระบุ' }}</p></div>
+    <div class="lesson"><h3>กิจกรรมการเรียนรู้ / ขั้นตอนการสอน</h3><p>{{ plan.activities or 'ยังไม่ได้ระบุ' }}</p></div>
+    <div class="lesson"><h3>สื่อและอุปกรณ์</h3><p>{{ plan.materials or 'ยังไม่ได้ระบุ' }}</p></div>
+    <div class="lesson"><h3>การวัดและประเมินผล</h3><p>{{ plan.assessment or 'ยังไม่ได้ระบุ' }}</p></div>
+    <p class="muted">สร้างเมื่อ {{ plan.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+    <button class="primary" onclick="window.print()">พิมพ์ / บันทึกเป็น PDF</button></div>
     """
-    return render_page("เธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”เนเธเธ", body, plan=plan)
+    return render_page("รายละเอียดแผน", body, plan=plan)
 
 @app.route("/plans/<int:plan_id>/delete", methods=["POST"])
 @login_required
@@ -294,12 +294,12 @@ def delete_plan(plan_id):
     plan = LessonPlan.query.filter_by(id=plan_id, user_id=get_current_user().id).first_or_404()
     db.session.delete(plan)
     db.session.commit()
-    flash("เธฅเธเนเธเธเธเธฒเธฃเธชเธญเธเนเธฅเนเธง")
+    flash("ลบแผนการสอนแล้ว")
     return redirect(url_for("dashboard"))
 
 @app.errorhandler(404)
 def not_found(_error):
-    return render_page("เนเธกเนเธเธเธซเธเนเธฒ", '<div class="card"><h2>เนเธกเนเธเธเธซเธเนเธฒเธ—เธตเนเธ•เนเธญเธเธเธฒเธฃ</h2><a class="btn primary" href="/">เธเธฅเธฑเธเธซเธเนเธฒเธซเธฅเธฑเธ</a></div>'), 404
+    return render_page("ไม่พบหน้า", '<div class="card"><h2>ไม่พบหน้าที่ต้องการ</h2><a class="btn primary" href="/">กลับหน้าหลัก</a></div>'), 404
 
 with app.app_context():
     db.create_all()
